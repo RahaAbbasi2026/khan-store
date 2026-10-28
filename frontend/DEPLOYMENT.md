@@ -68,3 +68,9 @@ npm run db:deploy
 - https://github.com/liara-cloud/docs/blob/master/src/pages/paas/nodejs/how-tos/deploy-app.mdx
 - https://tailwindcss.com/docs/upgrade-guide
 - https://docs.nestjs.com/migration-guide
+
+## جایگزینی پس‌زمینه‌ی عکس محصول (پنل مدیریت)
+
+- در فرم محصول پس از انتخاب عکس، یکی از پس‌زمینه‌های `public/backgrounds` را انتخاب کنید؛ پردازش کاملاً در مرورگر ادمین انجام می‌شود و تصویر نهایی ۱۶۰۰×۱۶۰۰ (JPEG زیر ۳ مگابایت) مثل هر عکس دیگری ذخیره می‌شود.
+- بار اول، مرورگر مدل برش تصویر (حدود ۸۰ مگابایت) را از `staticimgly.com` دریافت می‌کند. اگر این آدرس از اینترنت شما در دسترس نبود، فایل‌های بسته‌ی `@imgly/background-removal-data@1.4.5` را روی هاست خودتان بگذارید و `NEXT_PUBLIC_BG_MODEL_URL` را روی آدرس آن (با `/` در انتها) تنظیم و فرانت را دوباره build کنید.
+- کتابخانه‌ی `@imgly/background-removal` با مجوز AGPL-3.0 است؛ چون سورس پروژه عمومی است مشکلی ندارد، ولی اگر مخزن را خصوصی کردید، موضوع را بررسی کنید.
