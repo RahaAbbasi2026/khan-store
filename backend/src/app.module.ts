@@ -17,6 +17,7 @@ import { ContactModule } from './contact/contact.module';
 import { SiteContentModule } from './site-content/site-content.module';
 import { CaptchaModule } from './captcha/captcha.module';
 import { ArticlesModule } from './articles/articles.module';
+import { SeoModule } from './seo/seo.module';
 
 @Module({
   providers: [{ provide: APP_GUARD, useClass: RateLimitGuard }],
@@ -37,6 +38,7 @@ import { ArticlesModule } from './articles/articles.module';
     SiteContentModule,
     CaptchaModule,
     ArticlesModule,
+    SeoModule,
   ],
 })
 export class AppModule {}

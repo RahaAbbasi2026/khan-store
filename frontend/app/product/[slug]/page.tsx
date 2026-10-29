@@ -7,7 +7,8 @@ import StarRating from '@/components/StarRating';
 import { safeJson } from '@/lib/safe-json';
 import PageLinks from '@/components/PageLinks';
 import Breadcrumb from '@/components/Breadcrumb';
-import { absoluteUrl, availabilityUrl, breadcrumbJsonLd, orNotFound, orNull, SITE_NAME } from '@/lib/seo';
+import { absoluteUrl, availabilityUrl, breadcrumbJsonLd, orNull, orRedirect, SITE_NAME } from '@/lib/seo';
+import { fallbackDescription, pageTitle } from '@/lib/seoText';
 
 const lightLabel: Record<string, string> = {
   LOW: 'کم‌نور',
@@ -30,21 +31,27 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const product = await orNull(api.getProduct(slug));
   if (!product) return { robots: { index: false, follow: false } };
 
-  const description = product.description.replace(/\s+/g, ' ').trim().slice(0, 160);
+  const title = product.seoTitle || product.nameFa;
+  const description = product.seoDescription || fallbackDescription(product.description);
+  const ogTitle = product.ogTitle || title;
+  const ogDescription = product.ogDescription || description;
+  const image = [product.ogImage, product.images[0]].find((src) => src?.startsWith('http'));
   return {
-    // The root layout title template appends the brand name, so it is not repeated here.
-    title: product.nameFa,
+    // The root layout title template appends the brand name unless the title already has it.
+    title: pageTitle(title),
     description,
-    alternates: { canonical: `/product/${product.slug}` },
+    alternates: { canonical: product.canonicalUrl || `/product/${product.slug}` },
+    ...(product.noindex ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       type: 'website',
       locale: 'fa_IR',
       siteName: SITE_NAME,
       url: `/product/${product.slug}`,
-      title: product.nameFa,
-      description,
-      images: product.images[0]?.startsWith('http') ? [product.images[0]] : undefined,
+      title: ogTitle,
+      description: ogDescription,
+      images: image ? [image] : undefined,
     },
+    twitter: { card: image ? 'summary_large_image' : 'summary', title: ogTitle, description: ogDescription, images: image ? [image] : undefined },
   };
 }
 
@@ -52,7 +59,7 @@ export default async function ProductPage({ params, searchParams }: {
   params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
-  const product = await orNotFound(api.getProduct(slug));
+  const product = await orRedirect(api.getProduct(slug), 'product', slug);
 
   const page = Math.min(10000, Math.max(1, Math.floor(Number((await searchParams).page) || 1)));
   const { reviews, count } = await api.getProductReviews(product.id, page).catch(() => ({ reviews: [], count: 0 }));

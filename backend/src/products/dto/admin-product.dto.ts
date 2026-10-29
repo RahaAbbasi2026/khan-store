@@ -1,5 +1,6 @@
 import { Max, ArrayMaxSize } from 'class-validator';
-import { MaxLength } from 'class-validator';
+import { Matches, MaxLength } from 'class-validator';
+import { SeoFieldsDto, SLUG_MESSAGE, SLUG_PATTERN } from '../../seo/seo-fields.dto';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -12,10 +13,11 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class CreateProductDto {
+export class CreateProductDto extends SeoFieldsDto {
   @IsString()
   @MinLength(2)
   @MaxLength(100)
+  @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE })
   slug: string;
 
   @IsString()
@@ -87,7 +89,14 @@ export class CreateProductDto {
   stockStatus?: 'IN_STOCK' | 'OUT_OF_STOCK' | 'PREORDER';
 }
 
-export class UpdateProductDto {
+export class UpdateProductDto extends SeoFieldsDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE })
+  slug?: string;
+
   @IsOptional()
   @IsString()
   @MinLength(2)

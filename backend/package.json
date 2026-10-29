@@ -5,7 +5,7 @@
   "scripts": {
     "build": "prisma generate --schema=./prisma/schema.prisma && tsc -p tsconfig.json",
     "test:payment": "npm run build && node --test test/payment-security.test.cjs",
-    "test:security": "npm run build && node --test test/payment-security.test.cjs test/order-access.test.cjs test/cart-ownership.test.cjs test/jwt-security.test.cjs test/security-database.test.cjs test/migration-workflow.test.cjs",
+    "test:security": "npm run build && node --test test/payment-security.test.cjs test/order-access.test.cjs test/cart-ownership.test.cjs test/jwt-security.test.cjs test/security-database.test.cjs test/migration-workflow.test.cjs test/seo-fields.test.cjs",
     "start": "node dist/src/main.js",
     "start:dev": "node --watch -r ts-node/register/transpile-only src/main.ts",
     "start:prod": "node dist/src/main.js",

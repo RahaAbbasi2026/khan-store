@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { api } from '@/lib/api';
 import { SHOP_ENABLED } from '@/lib/site';
-import { SITE_URL } from '@/lib/seo';
+import { isSelfCanonical, SITE_URL } from '@/lib/seo';
 
 // The sitemap must list every indexable URL. The API caps a page at 12 items, so walk all pages.
 // An API failure is thrown (the sitemap request fails and crawlers retry) instead of silently
@@ -30,16 +30,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (let page = 2; page <= productPages; page++) {
     productLists.push((await api.getProducts({ page: String(page), limit: '12' })).products);
   }
+  // Pages marked noindex, or whose canonical points elsewhere, are not listed.
   for (const product of productLists.flat()) {
-    routes.push({ url: `${SITE_URL}/product/${product.slug}`, changeFrequency: 'weekly', priority: 0.7 });
+    const path = `/product/${product.slug}`;
+    if (product.noindex || !isSelfCanonical(product.canonicalUrl, path)) continue;
+    routes.push({ url: `${SITE_URL}${path}`, lastModified: product.updatedAt, changeFrequency: 'weekly', priority: 0.7 });
   }
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     const articles = await api.getArticles(page);
     for (const article of articles) {
+      const path = `/magazine/${article.slug}`;
+      if (article.noindex || !isSelfCanonical(article.canonicalUrl, path)) continue;
       routes.push({
-        url: `${SITE_URL}/magazine/${article.slug}`,
-        lastModified: article.publishedAt ?? undefined,
+        url: `${SITE_URL}${path}`,
+        lastModified: article.updatedAt ?? article.publishedAt ?? undefined,
         changeFrequency: 'monthly',
         priority: 0.5,
       });

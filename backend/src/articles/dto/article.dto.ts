@@ -1,10 +1,12 @@
-import { MaxLength } from 'class-validator';
+import { Matches, MaxLength } from 'class-validator';
+import { SeoFieldsDto, SLUG_MESSAGE, SLUG_PATTERN } from '../../seo/seo-fields.dto';
 import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 
-export class CreateArticleDto {
+export class CreateArticleDto extends SeoFieldsDto {
   @IsString()
   @MinLength(2)
   @MaxLength(100)
+  @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE })
   slug: string;
 
   @IsString()
@@ -31,7 +33,14 @@ export class CreateArticleDto {
   status?: 'DRAFT' | 'PUBLISHED';
 }
 
-export class UpdateArticleDto {
+export class UpdateArticleDto extends SeoFieldsDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE })
+  slug?: string;
+
   @IsOptional()
   @IsString()
   @MinLength(2)

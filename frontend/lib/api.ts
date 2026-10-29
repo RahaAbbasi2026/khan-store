@@ -35,6 +35,9 @@ export const api = {
 
   getArticle: (slug: string) => request<import('./types').Article>(`/articles/${slug}`),
 
+  getRedirect: (type: 'product' | 'article', slug: string) =>
+    request<{ slug: string }>(`/redirects/${type}/${encodeURIComponent(slug)}`),
+
   getSiteContent: (key: string) =>
     request<{ key: string; value: string | null }>(`/site-content/${key}`),
 

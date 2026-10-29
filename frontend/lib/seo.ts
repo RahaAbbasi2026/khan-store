@@ -1,8 +1,8 @@
-import { notFound } from 'next/navigation';
-import { ApiError } from './api';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { api, ApiError } from './api';
+import { SITE_URL } from './seoText';
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://golekhan.ir').replace(/\/$/, '');
-export const SITE_NAME = 'گل خان';
+export { SITE_NAME, SITE_URL } from './seoText';
 
 /** Absolute URL for a site path. */
 export function absoluteUrl(path: string) {
@@ -61,4 +61,27 @@ export function availabilityUrl(status: string) {
     default:
       return 'https://schema.org/OutOfStock';
   }
+}
+
+/**
+ * Like orNotFound, but a 404 for a renamed product or article becomes a permanent redirect
+ * to its current address (the API keeps old slugs after a slug change).
+ */
+export async function orRedirect<T>(request: Promise<T>, type: 'product' | 'article', slug: string): Promise<T> {
+  try {
+    return await request;
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) throw error;
+    const target = await orNull(api.getRedirect(type, slug));
+    if (target && target.slug !== slug) {
+      permanentRedirect(type === 'product' ? `/product/${target.slug}` : `/magazine/${target.slug}`);
+    }
+    notFound();
+  }
+}
+
+/** Whether a canonical override points at this page itself (empty means it does). */
+export function isSelfCanonical(canonicalUrl: string | null | undefined, path: string) {
+  if (!canonicalUrl) return true;
+  return canonicalUrl === path || canonicalUrl === absoluteUrl(path);
 }

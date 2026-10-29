@@ -11,6 +11,13 @@ export interface ContactMessage {
   createdAt: string;
 }
 
+export interface SeoDuplicate {
+  type: 'product' | 'article';
+  id: string;
+  slug: string;
+  name: string;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export class AdminAuthError extends Error {}
@@ -115,6 +122,13 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ topic }),
     }),
+
+  findSeoDuplicates: (params: { title?: string; description?: string; excludeType?: 'product' | 'article'; excludeId?: string }) =>
+    adminRequest<{ title: SeoDuplicate[]; description: SeoDuplicate[] }>(
+      `/admin/seo/duplicates?${new URLSearchParams(
+        Object.entries(params).filter(([, v]) => v) as [string, string][],
+      ).toString()}`,
+    ),
 
   getSiteContent: (key: string) =>
     adminRequest<{ key: string; value: string | null }>(`/site-content/${key}`),
