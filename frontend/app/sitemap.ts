@@ -1,46 +1,51 @@
 import type { MetadataRoute } from 'next';
 import { api } from '@/lib/api';
 import { SHOP_ENABLED } from '@/lib/site';
+import { SITE_URL } from '@/lib/seo';
+
+// The sitemap must list every indexable URL. The API caps a page at 12 items, so walk all pages.
+// An API failure is thrown (the sitemap request fails and crawlers retry) instead of silently
+// publishing an incomplete sitemap.
+const MAX_PAGES = 1000;
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://golekhan.ir';
-
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${siteUrl}/`, changeFrequency: 'daily', priority: 1 },
-    { url: `${siteUrl}/catalog`, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${siteUrl}/magazine`, changeFrequency: 'weekly', priority: 0.6 },
-    { url: `${siteUrl}/about`, changeFrequency: 'monthly', priority: 0.4 },
-    { url: `${siteUrl}/story`, changeFrequency: 'monthly', priority: 0.4 },
-    { url: `${siteUrl}/values`, changeFrequency: 'monthly', priority: 0.4 },
-    { url: `${siteUrl}/contact`, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/`, changeFrequency: 'daily', priority: 1 },
+    { url: `${SITE_URL}/catalog`, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${SITE_URL}/magazine`, changeFrequency: 'weekly', priority: 0.6 },
+    { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/story`, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/values`, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.4 },
   ];
-
   const routes: MetadataRoute.Sitemap = [...staticRoutes];
   if (SHOP_ENABLED) {
-    routes.push({ url: `${siteUrl}/occasion`, changeFrequency: 'weekly', priority: 0.6 });
+    routes.push({ url: `${SITE_URL}/occasion`, changeFrequency: 'weekly', priority: 0.6 });
   }
 
-  try {
-    const { products } = await api.getProducts({});
-    routes.push(
-      ...products.map((p) => ({
-        url: `${siteUrl}/product/${p.slug}`,
-        changeFrequency: 'weekly' as const,
-        priority: 0.7,
-      })),
-    );
-  } catch {}
+  const first = await api.getProducts({ page: '1', limit: '12' });
+  const productPages = Math.min(MAX_PAGES, Math.ceil(first.count / 12));
+  const productLists = [first.products];
+  for (let page = 2; page <= productPages; page++) {
+    productLists.push((await api.getProducts({ page: String(page), limit: '12' })).products);
+  }
+  for (const product of productLists.flat()) {
+    routes.push({ url: `${SITE_URL}/product/${product.slug}`, changeFrequency: 'weekly', priority: 0.7 });
+  }
 
-  try {
-    const articles = await api.getArticles();
-    routes.push(
-      ...articles.map((a) => ({
-        url: `${siteUrl}/magazine/${a.slug}`,
-        changeFrequency: 'monthly' as const,
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const articles = await api.getArticles(page);
+    for (const article of articles) {
+      routes.push({
+        url: `${SITE_URL}/magazine/${article.slug}`,
+        lastModified: article.publishedAt ?? undefined,
+        changeFrequency: 'monthly',
         priority: 0.5,
-      })),
-    );
-  } catch {}
+      });
+    }
+    if (articles.length < 12) break;
+  }
 
   return routes;
 }

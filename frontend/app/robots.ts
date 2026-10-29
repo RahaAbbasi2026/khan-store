@@ -1,15 +1,9 @@
 import type { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/seo';
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://golekhan.ir';
   return {
-    rules: [
-      {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['/admin', '/account', '/cart', '/checkout'],
-      },
-    ],
-    sitemap: `${siteUrl}/sitemap.xml`,
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/account', '/cart', '/checkout', '/api/'] }],
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

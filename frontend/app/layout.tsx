@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { safeJson } from '@/lib/safe-json';
+import { SITE_NAME, SITE_URL as SEO_SITE_URL } from '@/lib/seo';
 import { Vazirmatn, Aref_Ruqaa } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
@@ -28,7 +30,6 @@ export const metadata: Metadata = {
   description:
     'گل خان، فروشگاه آنلاین ممتاز گل و گیاه — گل‌های شاخه‌بریده، گیاهان آپارتمانی، گل مناسبتی و ارسال سریع در تهران.',
   keywords: ['خرید گل آنلاین', 'گل فروشی آنلاین', 'گیاه آپارتمانی', 'گل مناسبتی', 'گل خان'],
-  alternates: { canonical: '/' },
   icons: { icon: '/icon.svg' },
   openGraph: {
     type: 'website',
@@ -39,10 +40,33 @@ export const metadata: Metadata = {
   },
 };
 
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SEO_SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SEO_SITE_URL,
+      logo: `${SEO_SITE_URL}/khan-logo-stacked.svg`,
+      contactPoint: [{ '@type': 'ContactPoint', telephone: '+989198302302', contactType: 'customer service', availableLanguage: ['fa'] }],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SEO_SITE_URL}/#website`,
+      url: SEO_SITE_URL,
+      name: SITE_NAME,
+      inLanguage: 'fa-IR',
+      publisher: { '@id': `${SEO_SITE_URL}/#organization` },
+    },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl" className={`${vazir.variable} ${aref.variable}`}>
       <body className="font-body text-ink">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJson(organizationJsonLd) }} />
         <CartProvider>
           <div className="bg-ruby-deep text-bronze-light text-center text-xs py-2 tracking-wide">
             ارسال ویژه در تهران، امروز تا ساعت ۲۱:۰۰ | سفارش‌های ممتاز با بسته‌بندی اختصاصی گل خان

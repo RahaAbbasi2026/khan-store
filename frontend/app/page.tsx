@@ -1,7 +1,14 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import { SHOP_ENABLED } from '@/lib/site';
+
+export const metadata: Metadata = {
+  title: { absolute: 'گل خان | فروشگاه آنلاین ممتاز گل و گیاه' },
+  description: 'خرید آنلاین گل شاخه‌بریده، گل مناسبتی و گیاهان آپارتمانی از گل خان، همراه با راهنمای نگهداری و ارسال در تهران.',
+  alternates: { canonical: '/' },
+};
 
 export default async function HomePage() {
   const [{ products }, categories] = await Promise.all([
