@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { api } from '@/lib/api';
 import AddToCartBox from '@/components/AddToCartBox';
 import ShopDisabledNotice from '@/components/ShopDisabledNotice';
@@ -7,6 +6,8 @@ import { SHOP_ENABLED } from '@/lib/site';
 import StarRating from '@/components/StarRating';
 import { safeJson } from '@/lib/safe-json';
 import PageLinks from '@/components/PageLinks';
+import Breadcrumb from '@/components/Breadcrumb';
+import { absoluteUrl, availabilityUrl, breadcrumbJsonLd, orNotFound, orNull, SITE_NAME } from '@/lib/seo';
 
 const lightLabel: Record<string, string> = {
   LOW: 'کم‌نور',
@@ -26,15 +27,20 @@ const stockLabel: Record<string, string> = {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await api.getProduct(slug).catch(() => null);
-  if (!product) return {};
+  const product = await orNull(api.getProduct(slug));
+  if (!product) return { robots: { index: false, follow: false } };
 
-  const description = product.description.slice(0, 160);
+  const description = product.description.replace(/\s+/g, ' ').trim().slice(0, 160);
   return {
-    title: `${product.nameFa} | گل خان`,
+    // The root layout title template appends the brand name, so it is not repeated here.
+    title: product.nameFa,
     description,
     alternates: { canonical: `/product/${product.slug}` },
     openGraph: {
+      type: 'website',
+      locale: 'fa_IR',
+      siteName: SITE_NAME,
+      url: `/product/${product.slug}`,
       title: product.nameFa,
       description,
       images: product.images[0]?.startsWith('http') ? [product.images[0]] : undefined,
@@ -46,8 +52,7 @@ export default async function ProductPage({ params, searchParams }: {
   params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
-  const product = await api.getProduct(slug).catch(() => null);
-  if (!product) return notFound();
+  const product = await orNotFound(api.getProduct(slug));
 
   const page = Math.min(10000, Math.max(1, Math.floor(Number((await searchParams).page) || 1)));
   const { reviews, count } = await api.getProductReviews(product.id, page).catch(() => ({ reviews: [], count: 0 }));
@@ -55,17 +60,20 @@ export default async function ProductPage({ params, searchParams }: {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
+    '@id': `${absoluteUrl(`/product/${product.slug}`)}#product`,
+    url: absoluteUrl(`/product/${product.slug}`),
     name: product.nameFa,
     description: product.description,
-    image: product.images[0],
+    sku: product.id,
+    category: product.category.nameFa,
+    brand: { '@type': 'Brand', name: SITE_NAME },
+    ...(product.images.length ? { image: product.images } : {}),
     offers: {
       '@type': 'Offer',
+      url: absoluteUrl(`/product/${product.slug}`),
       priceCurrency: 'IRR',
       price: product.priceToman * 10,
-      availability:
-        product.stockStatus === 'IN_STOCK'
-          ? 'https://schema.org/InStock'
-          : 'https://schema.org/OutOfStock',
+      availability: availabilityUrl(product.stockStatus),
     },
     ...(product.ratingCount
       ? {
@@ -81,11 +89,36 @@ export default async function ProductPage({ params, searchParams }: {
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJson(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJson(breadcrumbJsonLd([
+            { name: 'خانه', path: '/' },
+            { name: 'کاتالوگ', path: '/catalog' },
+            { name: product.category.nameFa, path: `/catalog?category=${product.category.slug}` },
+            { name: product.nameFa, path: `/product/${product.slug}` },
+          ])),
+        }}
+      />
+      <Breadcrumb
+        items={[
+          { name: 'خانه', href: '/' },
+          { name: 'کاتالوگ', href: '/catalog' },
+          { name: product.category.nameFa, href: `/catalog?category=${product.category.slug}` },
+          { name: product.nameFa },
+        ]}
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         <div>
-          <div
-            className="h-[420px] rounded-md border border-bronze/30 bg-cover bg-center"
-            style={{ backgroundImage: `url(${product.images[0] || '/images/placeholder.jpg'})` }}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={product.images[0] || '/images/placeholder.jpg'}
+            alt={product.nameFa}
+            width={800}
+            height={800}
+            fetchPriority="high"
+            decoding="async"
+            className="w-full aspect-square rounded-md border border-bronze/30 object-cover"
           />
         </div>
 
@@ -163,7 +196,7 @@ export default async function ProductPage({ params, searchParams }: {
       </div>
 
       <div className="max-w-2xl mt-16">
-        <h3 className="font-display text-2xl text-ruby mb-6">دیدگاه مشتریان</h3>
+        <h2 className="font-display text-2xl text-ruby mb-6">دیدگاه مشتریان</h2>
         {reviews.length === 0 ? (
           <p className="text-sm text-ink-soft">هنوز نظری برای این محصول ثبت نشده.</p>
         ) : (

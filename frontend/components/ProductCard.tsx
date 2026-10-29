@@ -29,10 +29,17 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <div className="bg-white border border-bronze/30 rounded-sm overflow-hidden hover:shadow-lg hover:border-bronze transition group">
       <Link href={`/product/${product.slug}`} className="block">
-        <div
-          className="h-48 bg-cover bg-center relative"
-          style={{ backgroundImage: `url(${product.images[0] || '/images/placeholder.jpg'})` }}
-        >
+        <div className="h-48 relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={product.images[0] || '/images/placeholder.jpg'}
+            alt={product.nameFa}
+            width={400}
+            height={400}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           {product.stockStatus !== 'IN_STOCK' && (
             <span
               className={`absolute top-2 left-2 text-white text-[11px] px-3 py-1 rounded-full ${badgeClass[product.stockStatus]}`}
@@ -45,7 +52,7 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.nameScientific && (
             <div className="text-xs italic text-ink-soft mb-1">{product.nameScientific}</div>
           )}
-          <h4 className="text-base mb-3">{product.nameFa}</h4>
+          <h3 className="text-base mb-3">{product.nameFa}</h3>
         </div>
       </Link>
       <div className="px-4 pb-4 flex items-center justify-between">

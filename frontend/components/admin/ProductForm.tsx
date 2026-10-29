@@ -170,7 +170,7 @@ export default function ProductForm({ product }: { product?: Product }) {
         </div>
       </div>
 
-      <ImageUploadInput value={values.images} onChange={(v) => set('images', v)} label="عکس محصول" />
+      <ImageUploadInput value={values.images} onChange={(v) => set('images', v)} label="عکس محصول" withBackground />
 
       <div className="grid grid-cols-2 gap-4">
         <div>

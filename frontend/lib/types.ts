@@ -105,4 +105,5 @@ export interface Article {
   status: 'DRAFT' | 'PUBLISHED';
   publishedAt: string | null;
   createdAt: string;
+  updatedAt?: string;
 }
