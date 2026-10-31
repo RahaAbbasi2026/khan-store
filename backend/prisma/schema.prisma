@@ -73,6 +73,15 @@ model Product {
 
   stockStatus           StockStatus    @default(IN_STOCK)
 
+  // SEO overrides (empty = derived from the page content)
+  seoTitle              String?
+  seoDescription        String?
+  noindex               Boolean        @default(false)
+  canonicalUrl          String?
+  ogTitle               String?
+  ogDescription         String?
+  ogImage               String?
+
   cartItems             CartItem[]
   orderItems            OrderItem[]
   reviews               Review[]
@@ -213,8 +222,36 @@ model Article {
   coverImage  String?
   status      ArticleStatus @default(DRAFT)
   publishedAt DateTime?
+
+  // SEO overrides (empty = derived from the page content)
+  seoTitle       String?
+  seoDescription String?
+  noindex        Boolean       @default(false)
+  canonicalUrl   String?
+  ogTitle        String?
+  ogDescription  String?
+  ogImage        String?
+
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+}
+
+enum RedirectType {
+  PRODUCT
+  ARTICLE
+}
+
+// Old slugs of renamed products/articles. Points at the record id, so a chain of renames
+// always resolves to the current slug with a single permanent redirect.
+model SlugRedirect {
+  id        String       @id @default(cuid())
+  type      RedirectType
+  fromSlug  String
+  targetId  String
+  createdAt DateTime     @default(now())
+
+  @@unique([type, fromSlug])
+  @@index([targetId])
 }
 
 // Editable page texts managed from the admin panel (keys: "about", "story", "values").

@@ -15,13 +15,24 @@ export interface GreetingCard {
   label?: string | null;
 }
 
+/** Optional per-page SEO overrides; empty means "derive from the content". */
+export interface SeoFields {
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  noindex?: boolean;
+  canonicalUrl?: string | null;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
+}
+
 export interface Category {
   id: string;
   slug: string;
   nameFa: string;
 }
 
-export interface Product {
+export interface Product extends SeoFields {
   id: string;
   slug: string;
   nameFa: string;
@@ -41,6 +52,7 @@ export interface Product {
   stockStatus: StockStatus;
   ratingAverage?: number;
   ratingCount?: number;
+  updatedAt?: string;
 }
 
 export interface Review {
@@ -95,7 +107,7 @@ export interface Order {
 
 export type OrderReceipt = Pick<Order, 'orderNumber' | 'status' | 'totalToman' | 'paymentRefId'>;
 
-export interface Article {
+export interface Article extends SeoFields {
   id: string;
   slug: string;
   title: string;

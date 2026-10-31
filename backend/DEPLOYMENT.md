@@ -68,3 +68,15 @@ npm run db:deploy
 - https://github.com/liara-cloud/docs/blob/master/src/pages/paas/nodejs/how-tos/deploy-app.mdx
 - https://tailwindcss.com/docs/upgrade-guide
 - https://docs.nestjs.com/migration-guide
+
+## فیلدهای سئوی مقاله و محصول (فاز ۱B) — migration لازم است
+
+این نسخه ستون‌های سئو (`seoTitle`، `seoDescription`، `noindex`، `canonicalUrl`، `ogTitle`، `ogDescription`، `ogImage`) را به جدول‌های `Product` و `Article` و جدول `SlugRedirect` (نگهداری اسلاگ‌های قبلی برای ریدایرکت دائمی) را اضافه می‌کند. تغییرها افزایشی‌اند و داده‌ای حذف نمی‌شود؛ SQL در `prisma/migrations/20261029000000_seo_fields/migration.sql` است.
+
+**بک‌اند جدید بدون این migration کار نمی‌کند** (درخواست‌های محصول و مقاله خطا می‌دهند). پیش از یا هم‌زمان با انتشار بک‌اند، در پوشه بک‌اند و با DATABASE_URL همان دیتابیس اجرا کنید:
+
+```sh
+npm run db:deploy
+```
+
+اگر baseline قبلاً ثبت شده باشد (طبق راهنمای بالا)، فقط همین دستور لازم است. سپس بک‌اند و بعد فرانت‌اند را منتشر کنید.

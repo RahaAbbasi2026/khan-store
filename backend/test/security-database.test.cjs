@@ -29,6 +29,7 @@ before(async () => {
   await db.exec(fs.readFileSync(path.join(__dirname, '../prisma/migrations/20261022000000_baseline/migration.sql'), 'utf8'));
   await db.exec(`INSERT INTO "Category" ("id", "slug", "nameFa") VALUES ('preserved', 'preserved', 'Before migration')`);
   await db.exec(fs.readFileSync(path.join(__dirname, '../prisma/migrations/20261022010000_security_state/migration.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(__dirname, '../prisma/migrations/20261029000000_seo_fields/migration.sql'), 'utf8'));
   assert.equal((await db.query(`SELECT "nameFa" FROM "Category" WHERE "id"='preserved'`)).rows[0].nameFa, 'Before migration');
   const reservation = net.createServer();
   await new Promise((resolve) => reservation.listen(0, '127.0.0.1', resolve));

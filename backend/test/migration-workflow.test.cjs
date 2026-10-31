@@ -26,7 +26,7 @@ test('verified baseline plus migrate deploy upgrades an existing database withou
     await command(['node_modules/prisma/build/index.js', 'migrate', 'deploy']);
     assert.equal((await db.query(`SELECT "nameFa" FROM "Category" WHERE "id"='kept'`)).rows[0].nameFa, 'Keep existing data');
     const history = (await db.query(`SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL ORDER BY migration_name`)).rows;
-    assert.equal(history.length, 2);
+    assert.equal(history.length, 3);
     assert((await command(['scripts/baseline.cjs'])).includes('already recorded'));
     assert.equal((await db.query(`SELECT count(*)::int AS count FROM information_schema.columns WHERE table_name='Order' AND column_name='checkoutKey'`)).rows[0].count, 1);
   } finally { if (server) await server.stop(); await db.close(); }

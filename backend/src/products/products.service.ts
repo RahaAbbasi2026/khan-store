@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryProductsDto } from './dto/query-products.dto';
 import { assertImage, mediaUrl, publicImages } from '../media/media-utils';
+import { cleanSeo, recordSlugChange } from '../seo/seo-utils';
 
 @Injectable()
 export class ProductsService {
@@ -47,7 +48,8 @@ export class ProductsService {
       where,
       orderBy,
       skip: ((query.page ?? 1) - 1) * (query.limit ?? 12), take: query.limit ?? 12,
-      select: { id: true, slug: true, nameFa: true, nameScientific: true, priceToman: true, stockStatus: true, category: true },
+      select: { id: true, slug: true, nameFa: true, nameScientific: true, priceToman: true, stockStatus: true, category: true,
+        noindex: true, canonicalUrl: true, updatedAt: true },
     });
     // Project only the first image's URL in PostgreSQL. Base64 blobs never
     // enter the list response (or the Node process for a catalog request).
@@ -81,6 +83,7 @@ export class ProductsService {
     return {
       ...product,
       images: publicImages(product.id, product.images),
+      ogImage: product.ogImage?.startsWith('data:') ? mediaUrl(`products/${encodeURIComponent(product.id)}/og`) : product.ogImage,
       ratingAverage: ratingAgg._avg.rating ?? 0,
       ratingCount: ratingAgg._count,
     };
@@ -95,20 +98,40 @@ export class ProductsService {
 
   async create(data: Prisma.ProductUncheckedCreateInput) {
     if (Array.isArray(data.images)) data.images.forEach(assertImage);
-    return this.prisma.product.create({ data, include: { category: true } });
+    data = cleanSeo(data);
+    if (await this.prisma.product.findUnique({ where: { slug: data.slug } })) {
+      throw new BadRequestException('این اسلاگ قبلاً استفاده شده است');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      // A live slug always wins over an old redirect with the same text.
+      await tx.slugRedirect.deleteMany({ where: { type: 'PRODUCT', fromSlug: data.slug } });
+      return tx.product.create({ data, include: { category: true } });
+    });
   }
 
   async update(id: string, data: Prisma.ProductUncheckedUpdateInput) {
     if (Array.isArray(data.images)) data.images.forEach(assertImage);
+    data = cleanSeo(data);
     const exists = await this.prisma.product.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('محصول موردنظر یافت نشد');
-    return this.prisma.product.update({ where: { id }, data, include: { category: true } });
+    const newSlug = typeof data.slug === 'string' && data.slug !== exists.slug ? data.slug : null;
+    if (newSlug && (await this.prisma.product.findUnique({ where: { slug: newSlug } }))) {
+      throw new BadRequestException('این اسلاگ قبلاً استفاده شده است');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      // The old address keeps working as a permanent redirect to the new one.
+      if (newSlug) await recordSlugChange(tx, 'PRODUCT', id, exists.slug, newSlug);
+      return tx.product.update({ where: { id }, data, include: { category: true } });
+    });
   }
 
   async remove(id: string) {
     const exists = await this.prisma.product.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('محصول موردنظر یافت نشد');
-    await this.prisma.product.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.slugRedirect.deleteMany({ where: { type: 'PRODUCT', targetId: id } }),
+      this.prisma.product.delete({ where: { id } }),
+    ]);
     return { success: true };
   }
 }

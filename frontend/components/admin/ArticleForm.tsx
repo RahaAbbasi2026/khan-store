@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/adminApi';
 import ImageUploadInput from './ImageUploadInput';
+import SeoFields, { toSeoFormValues, type SeoFormValues } from './SeoFields';
+import { canonicalProblem } from '@/lib/seoText';
 import type { Article } from '@/lib/types';
 
 export default function ArticleForm({ article }: { article?: Article }) {
@@ -14,6 +16,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
   const [content, setContent] = useState(article?.content ?? '');
   const [coverImage, setCoverImage] = useState(article?.coverImage ?? '');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>(article?.status ?? 'DRAFT');
+  const [seo, setSeo] = useState<SeoFormValues>(toSeoFormValues(article));
 
   const [topic, setTopic] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -40,14 +43,20 @@ export default function ArticleForm({ article }: { article?: Article }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const canonicalError = canonicalProblem(seo.canonicalUrl);
+    if (canonicalError) {
+      setError(`آدرس canonical: ${canonicalError}`);
+      return;
+    }
     setSaving(true);
     setError('');
-    const payload = { title, excerpt, content, coverImage: coverImage || undefined, status };
+    const payload = { title, excerpt, content, coverImage: coverImage || undefined, status, ...seo };
     try {
       if (article) {
-        await adminApi.updateArticle(article.id, payload);
+        const newSlug = slug.trim();
+        await adminApi.updateArticle(article.id, { ...payload, ...(newSlug !== article.slug ? { slug: newSlug } : {}) });
       } else {
-        await adminApi.createArticle({ ...payload, slug });
+        await adminApi.createArticle({ ...payload, slug: slug.trim() });
       }
       router.push('/admin/articles');
     } catch (err: any) {
@@ -86,18 +95,24 @@ export default function ArticleForm({ article }: { article?: Article }) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {!article && (
-          <div>
-            <label className="block text-sm mb-1 text-ink-soft">اسلاگ (شناسه یکتا در آدرس، انگلیسی)</label>
-            <input
-              required
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="example-article-slug"
-              className="w-full border border-bronze/30 rounded-md px-4 py-2.5 text-sm"
-            />
-          </div>
-        )}
+        <div>
+          <label className="block text-sm mb-1 text-ink-soft">اسلاگ (شناسه یکتا در آدرس، انگلیسی)</label>
+          <input
+            required
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="example-article-slug"
+            dir="ltr"
+            className="w-full border border-bronze/30 rounded-md px-4 py-2.5 text-sm"
+          />
+          {article && slug.trim() !== article.slug && (
+            <p className="text-xs text-amber-700 mt-1">
+              {article.publishedAt
+                ? <>آدرس قبلی (<bdi dir="ltr">/magazine/{article.slug}</bdi>) به‌صورت دائمی به آدرس جدید منتقل (ریدایرکت) می‌شود. اسلاگ را فقط در صورت لزوم تغییر دهید.</>
+                : 'این مقاله هنوز منتشر نشده، پس آدرس قبلی نگه داشته نمی‌شود.'}
+            </p>
+          )}
+        </div>
 
         <div>
           <label className="block text-sm mb-1 text-ink-soft">عنوان</label>
@@ -143,6 +158,14 @@ export default function ArticleForm({ article }: { article?: Article }) {
           </select>
         </div>
 
+        <SeoFields
+          values={seo}
+          onChange={(key, value) => setSeo((v) => ({ ...v, [key]: value }))}
+          fallback={{ title, description: excerpt, image: coverImage }}
+          path={`/magazine/${slug.trim() || 'slug'}`}
+          entity={{ type: 'article', id: article?.id }}
+        />
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex gap-3">
@@ -153,6 +176,16 @@ export default function ArticleForm({ article }: { article?: Article }) {
           >
             {saving ? 'در حال ذخیره...' : 'ذخیره'}
           </button>
+          {article && (
+            <a
+              href={`/admin/articles/${article.id}/preview`}
+              target="_blank"
+              rel="noopener"
+              className="border border-bronze/30 px-6 py-2.5 rounded-sm text-sm"
+            >
+              پیش‌نمایش نسخه‌ی ذخیره‌شده
+            </a>
+          )}
           <button
             type="button"
             onClick={() => router.push('/admin/articles')}

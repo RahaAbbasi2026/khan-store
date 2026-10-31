@@ -21,6 +21,10 @@ class MediaController {
   }
   @Get('products/:id/:index')
   async product(@Param('id') id: string, @Param('index') index: string, @Res() res: Response) {
+    if (index === 'og') {
+      const row = await this.prisma.product.findUnique({ where: { id }, select: { ogImage: true } });
+      return this.send(row?.ogImage, res);
+    }
     if (!/^[0-5]$/.test(index)) throw new NotFoundException('تصویر یافت نشد');
     const product = await this.prisma.product.findUnique({ where: { id }, select: { images: true } });
     return this.send(product?.images[Number(index)], res);
@@ -34,6 +38,11 @@ class MediaController {
   async article(@Param('id') id: string, @Res() res: Response) {
     const row = await this.prisma.article.findFirst({ where: { id, status: 'PUBLISHED' }, select: { coverImage: true } });
     return this.send(row?.coverImage, res);
+  }
+  @Get('articles/:id/og')
+  async articleOg(@Param('id') id: string, @Res() res: Response) {
+    const row = await this.prisma.article.findFirst({ where: { id, status: 'PUBLISHED' }, select: { ogImage: true } });
+    return this.send(row?.ogImage, res);
   }
 }
 @Module({ controllers: [MediaController] })

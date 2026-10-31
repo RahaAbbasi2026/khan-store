@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/adminApi';
 import ImageUploadInput from './ImageUploadInput';
+import SeoFields, { toSeoFormValues, type SeoFormValues } from './SeoFields';
+import { canonicalProblem, fallbackDescription } from '@/lib/seoText';
 import type { Category, Product } from '@/lib/types';
 
 export interface ProductFormValues {
@@ -50,6 +52,7 @@ export default function ProductForm({ product }: { product?: Product }) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [values, setValues] = useState<ProductFormValues>(toFormValues(product));
+  const [seo, setSeo] = useState<SeoFormValues>(toSeoFormValues(product));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,6 +66,11 @@ export default function ProductForm({ product }: { product?: Product }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const canonicalError = canonicalProblem(seo.canonicalUrl);
+    if (canonicalError) {
+      setError(`آدرس canonical: ${canonicalError}`);
+      return;
+    }
     setSaving(true);
     setError('');
 
@@ -82,13 +90,15 @@ export default function ProductForm({ product }: { product?: Product }) {
       airPurifying: values.airPurifying,
       suitableForOffice: values.suitableForOffice,
       stockStatus: values.stockStatus,
+      ...seo,
     };
 
     try {
       if (product) {
-        await adminApi.updateProduct(product.id, payload);
+        const newSlug = values.slug.trim();
+        await adminApi.updateProduct(product.id, { ...payload, ...(newSlug !== product.slug ? { slug: newSlug } : {}) });
       } else {
-        await adminApi.createProduct({ ...payload, slug: values.slug });
+        await adminApi.createProduct({ ...payload, slug: values.slug.trim() });
       }
       router.push('/admin/products');
     } catch (err: any) {
@@ -99,18 +109,22 @@ export default function ProductForm({ product }: { product?: Product }) {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
-      {!product && (
-        <div>
-          <label className="block text-sm mb-1 text-ink-soft">اسلاگ (شناسه یکتا در آدرس، انگلیسی)</label>
-          <input
-            required
-            value={values.slug}
-            onChange={(e) => set('slug', e.target.value)}
-            placeholder="example-product-name"
-            className="w-full border border-bronze/30 rounded-md px-4 py-2.5 text-sm"
-          />
-        </div>
-      )}
+      <div>
+        <label className="block text-sm mb-1 text-ink-soft">اسلاگ (شناسه یکتا در آدرس، انگلیسی)</label>
+        <input
+          required
+          value={values.slug}
+          onChange={(e) => set('slug', e.target.value)}
+          placeholder="example-product-name"
+          dir="ltr"
+          className="w-full border border-bronze/30 rounded-md px-4 py-2.5 text-sm"
+        />
+        {product && values.slug.trim() !== product.slug && (
+          <p className="text-xs text-amber-700 mt-1">
+            آدرس قبلی (<bdi dir="ltr">/product/{product.slug}</bdi>) به‌صورت دائمی به آدرس جدید منتقل (ریدایرکت) می‌شود. اسلاگ را فقط در صورت لزوم تغییر دهید.
+          </p>
+        )}
+      </div>
 
       <div>
         <label className="block text-sm mb-1 text-ink-soft">نام فارسی</label>
@@ -270,6 +284,14 @@ export default function ProductForm({ product }: { product?: Product }) {
         </div>
       </div>
 
+      <SeoFields
+        values={seo}
+        onChange={(key, value) => setSeo((v) => ({ ...v, [key]: value }))}
+        fallback={{ title: values.nameFa, description: fallbackDescription(values.description), image: values.images }}
+        path={`/product/${values.slug.trim() || 'slug'}`}
+        entity={{ type: 'product', id: product?.id }}
+      />
+
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex gap-3">
@@ -280,6 +302,16 @@ export default function ProductForm({ product }: { product?: Product }) {
         >
           {saving ? 'در حال ذخیره...' : 'ذخیره'}
         </button>
+        {product && (
+          <a
+            href={`/product/${product.slug}`}
+            target="_blank"
+            rel="noopener"
+            className="border border-bronze/30 px-6 py-2.5 rounded-sm text-sm"
+          >
+            مشاهده صفحه محصول
+          </a>
+        )}
         <button
           type="button"
           onClick={() => router.push('/admin/products')}
